@@ -26,7 +26,6 @@ QTV cfg updater by d2@tdhack.com
 [*] done, restart qtv manually
 ```
 ### installation
-<<<<<<< HEAD
 make sure to replace $HOME with something meaningful, like: /home/d2/
 
 * cd $HOME
@@ -39,16 +38,4 @@ make sure to replace $HOME with something meaningful, like: /home/d2/
 
 ### Ideas? Reports?
 
-=======
-* cd $HOME
-* git clone https://github.com/d2-d2/qtvcfg
-* chmod 755 $HOME/qtvcfg/qtv.sh
-* insert crontab entry: 0 0 * * * $HOME/qtv.sh > /dev/null 2>&1
-
-### todo
-* restart qtv service automatically
-
-### Ideas? Reports?
-
->>>>>>> e75537a05a80082fa45f34c0484aba0aa33266b3
 Send them to: d2@tdhack.com
