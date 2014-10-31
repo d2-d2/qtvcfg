@@ -1,5 +1,6 @@
 #!/bin/bash
 
+LOGFILE=${0}.log
 # paste full path to your qtv.cfg here, please make sure it have: # servers to monitor markup.
 # otherwise this script will fail to update it. Example syntax:
 # [...]
@@ -13,39 +14,39 @@ http://www.quakeservers.net/lists/servers/servers.txt
 http://www.quakeservers.net/lists/north_america/servers.txt
 "
 
-echo -e "QTV cfg updater by d2@tdhack.com\n"
+echo -e "QTV cfg updater by d2@tdhack.com\n" | tee -a ${LOGFILE}
 
 for servers in ${UPDATEURL}; do
-    echo -e "[i] getting fresh copy of servers.txt file from ${servers}"
+    echo -e "[i] getting fresh copy of servers.txt file from ${servers}" | tee -a ${LOGFILE}
     wget -q ${UPDATEURL} -O /tmp/servers.txt
     if [[ ${?} != 0 ]]; then
-        echo -e "\t[-] unable to get servers.txt from ${UPDATEURL}"
+        echo -e "\t[-] unable to get servers.txt from ${UPDATEURL}" | tee -a ${LOGFILE}
         exit 1
     fi
     grep "" /tmp/servers.txt | awk '{print $1}' >> /tmp/servers_tmp.txt
 done
 
-echo -e "[i] verifying your ${QTVFILE} file"
+echo -e "[i] verifying your ${QTVFILE} file" | tee -a ${LOGFILE}
 if [[ -e ${QTVFILE} ]]; then
     if [[ `grep '# servers to monitor' ${QTVFILE}` != "" ]]; then
-        echo -e "\t[+] backup of existing file"
+        echo -e "\t[+] backup of existing file" | tee -a ${LOGFILE}
         cp -pr ${QTVFILE}{,_`date +%Y-%m-%d@%H:%M:%S`}
-        echo -e "\t[+] preparing input data"
+        echo -e "\t[+] preparing input data" | tee -a ${LOGFILE}
         sed "1,`grep -n '# servers to monitor' ${QTVFILE} | cut -d: -f1`d" ${QTVFILE} | awk '{print $2}' >> /tmp/servers_tmp.txt
         cat /tmp/servers_tmp.txt | sort -r | uniq > /tmp/servers.txt
         sed -n "1,`grep -n '# servers to monitor' ${QTVFILE} | cut -d: -f1`p" ${QTVFILE} > /tmp/servers_qtv.cfg
         echo -e "\n" >> /tmp/servers_qtv.cfg
         cat /tmp/servers.txt | grep -v ^$ | sed -e 's,^,qtv ,g' >> /tmp/servers_qtv.cfg
-        echo -e "\t[+] compiling new ${QTVFILE}"
+        echo -e "\t[+] compiling new ${QTVFILE}" | tee -a ${LOGFILE}
         mv /tmp/servers_qtv.cfg ${QTVFILE}
-        echo -e "\t[+] cleaning tmp files"
+        echo -e "\t[+] cleaning tmp files" | tee -a ${LOGFILE}
         rm /tmp/servers_qtv.cfg /tmp/servers_tmp.cfg /tmp/servers.txt 2>/dev/null
-        echo -e "[*] done, restart qtv manually"
+        echo -e "[*] done, restart qtv manually" | tee -a ${LOGFILE}
     else
-        echo -e "\t[-] ${QTVFILE} exists but it does not contain: '# servers to monitor' marker. No action taken"
+        echo -e "\t[-] ${QTVFILE} exists but it does not contain: '# servers to monitor' marker. No action taken" | tee -a ${LOGFILE}
         exit 1
     fi
 else
-    echo -e "\t[-] unable to find ${QTVFILE} file. Aborting."
+    echo -e "\t[-] unable to find ${QTVFILE} file. Aborting." | tee -a ${LOGFILE}
     exit 1
 fi

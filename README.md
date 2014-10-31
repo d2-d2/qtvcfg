@@ -2,15 +2,17 @@
 
 shell script to update qtv.cfg files
 
-## Requirements
+### Requirements
 
 * bash
 * wget
 * sed
+* git
 
 ;-)
 
-## Example outputs:
+### Example outputs:
+```
 # ./qtv.sh
 QTV cfg updater by d2@tdhack.com
 
@@ -22,12 +24,18 @@ QTV cfg updater by d2@tdhack.com
         [+] compiling new qtv.cfg
         [+] cleaning tmp files
 [*] done, restart qtv manually
+```
+### installation
+make sure to replace $HOME with something meaningful, like: /home/d2/
 
-## installation
-* 
-* chmod 755 /root/qv.sh
-* insert crontab entry: 0 0 * * * /root/qtv.sh > /dev/null 2>&1
+* cd $HOME
+* git clone https://github.com/d2-d2/qtvcfg
+* chmod 755 $HOME/qtvcfg/qtv.sh
+* insert crontab entry: 0 0 * * * $HOME/qtv.sh > /dev/null 2>&1
 
-## todo
+### todo
 * restart qtv service automatically
-* logging!
+
+### Ideas? Reports?
+
+Send them to: d2@tdhack.com
