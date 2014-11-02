@@ -2,8 +2,8 @@
     - initial version
 # 0.2
     - add: timestamp of execution
-    - add: check qtv files before do anything with them
-    - add: auto restart of qtv if proper binary present
+    - add: check qtv files before doing anything with them
+    - add: autorestart of qtv if proper binary present
     - add: check crontab entry
-    - add: filter out unwanted servers from source URL
+    - add: filter out unwanted servers from source URL(s)
     - add: dedicated backup directory
