@@ -117,36 +117,36 @@ done < /tmp/servers_tmp.txt
 mv /tmp/servers_qw.txt /tmp/servers_tmp.txt
 echo -e "\t[i] done, `wc -l /tmp/servers_tmp.txt | awk '{print $1}'` in the final list" | tee -a ${LOGFILE}
 
-echo -e "\t[+] backup of existing file" | tee -a ${LOGFILE}
+echo -e "[i] backup of existing file" | tee -a ${LOGFILE}
 if [[ ${BACKUPDIR} != "" ]]; then
     cp -pr ${QTVFILE} ${BACKUPDIR}/`basename ${QTVFILE}`_`date +%Y-%m-%d@%H:%M:%S`
 else
     cp -pr ${QTVFILE}{,_`date +%Y-%m-%d@%H:%M:%S`}
 fi
-echo -e "\t[+] preparing input data" | tee -a ${LOGFILE}
+echo -e "[i] preparing input data" | tee -a ${LOGFILE}
 sed "1,`grep -n '# servers to monitor' ${QTVFILE} | cut -d: -f1`d" ${QTVFILE} | awk '{print $2}' >> /tmp/servers_tmp.txt
 cat /tmp/servers_tmp.txt | sort -r | uniq > /tmp/servers.txt
 sed -n "1,`grep -n '# servers to monitor' ${QTVFILE} | cut -d: -f1`p" ${QTVFILE} > /tmp/servers_qtv.cfg
 echo -e "\n" >> /tmp/servers_qtv.cfg
 cat /tmp/servers.txt | grep -v ^$ | sed -e 's,^,qtv ,g' >> /tmp/servers_qtv.cfg
-echo -e "\t[+] compiling new ${QTVFILE}" | tee -a ${LOGFILE}
+echo -e "[i] compiling new ${QTVFILE}" | tee -a ${LOGFILE}
 mv /tmp/servers_qtv.cfg ${QTVFILE}
-echo -e "\t[+] cleaning tmp files" | tee -a ${LOGFILE}
+echo -e "[i] cleaning tmp files" | tee -a ${LOGFILE}
 sk_cleanup
 THISSCRIPTNAME=`basename ${0}`
 THISSCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 THISQTVBIN=`basename ${QTVBIN}`
 if [[ ${QTVAUTORESTART} = 1 ]]; then
-    echo -e "\t[+] restarting qtv" | tee -a ${LOGFILE}
+    echo -e "[+] restarting qtv" | tee -a ${LOGFILE}
     QTVPID="`ps axwww | grep -v grep | grep ${THISQTVBIN} | awk '{print $1}'`"
     if [[ ${QTVPID} != "" ]]; then
-        echo -e "\t\t[i] running qtv found, PID: ${QTVPID}, killing it now!" | tee -a ${LOGFILE}
+        echo -e "\t[+] running qtv found, PID: ${QTVPID}, killing it now!" | tee -a ${LOGFILE}
         kill -9 ${QTVPID}
     fi
     cd `dirname ${QTVBIN}`
     nohup ${QTVBIN} > /dev/null 2>&1 &
 else
-    echo -e "[*] done, restart your qtv manually" | tee -a ${LOGFILE}
+    echo -e "[i] done, restart your qtv manually" | tee -a ${LOGFILE}
 fi
 echo -e "[i] checking crontab entry" | tee -a ${LOGFILE}
 if [[ `crontab -l > /dev/null 2>&1` = 0 ]]; then
