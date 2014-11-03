@@ -1,8 +1,9 @@
 #!/bin/bash
 
 #### CFG section starts here
-version=0.2
+version=0.3
 LOGFILE=${0}.log
+LOGERR=${0}.err
 # define pipe-delimited exclude list for quake servers
 EXCLUDELIST="QFWD|FWD"
 # dedicated backup directory for qtv.cfg files
@@ -22,6 +23,37 @@ UPDATEURL="http://www.quakeservers.net/lists/servers/servers.txt"
 QTVAUTORESTART=1
 #### CFG section ended - please do not change anything below this line ####
 
+function sk_checkquakeserver(){
+    known_server_strings="(MVDSV|FTE|CPQWSV|ZQuake)"
+    srv_data=${1}
+    s_ip=`echo ${srv_data} | cut -d: -f1`
+    s_port=`echo ${srv_data} | cut -d: -f2`
+    sv_ping=$(printf "\xff\xff\xff\xff ping" | nc -w 1 -u ${s_ip} ${s_port})
+    if [[  ${sv_ping} =~ 1 ]]; then
+        sv_version=$(printf "\xff\xff\xff\xff status" | nc -w 1 -u ${s_ip} ${s_port} | cut -d\\ -f2- | awk '{
+            for (i = 0; ++i <=NF;)
+                if ($i == o)
+                    ++C % c || $i = n 
+        } 1' FS= OFS= c=2 o=\\ n="\n" | tr '\\' '=' 2> /dev/null | grep --binary-files=text version | cut -d= -f2-)
+        if [[ ${sv_version} =~ ${known_server_strings} ]]; then
+            # yes, it's quakeserver
+            echo 0
+        else
+            # nope - fwd, proxy or other
+            echo 1
+        fi
+    else
+        # server is not responding to ping
+        echo 2
+    fi
+}
+
+function sk_cleanup(){
+    rm /tmp/servers_qtv.cfg /tmp/servers_tmp.txt /tmp/servers.txt ${0}.err 2>/dev/null
+}
+
+sk_cleanup
+
 echo -e "[`date +%Y-%m-%d@%H:%M:%S`] starting new event" | tee -a ${LOGFILE}
 echo -e "QTV cfg updater by d2@tdhack.com\n" | tee -a ${LOGFILE}
 
@@ -39,12 +71,12 @@ if [[ `grep '# servers to monitor' ${QTVFILE}` == "" ]]; then
 fi
 echo -e "[i] checking if ${QTVBIN} exists" | tee -a ${LOGFILE}
 if [[ ! -e ${QTVBIN} ]]; then
-    echo -e "\t[-] ${QTVBIN} not present in given path, autorestart disabled"
+    echo -e "\t[-] ${QTVBIN} not present in given path, autorestart disabled" | tee -a ${LOGFILE}
     QTVAUTORESTART=0
 fi
 echo -e "[i] checking if ${BACKUPDIR} exists" | tee -a ${LOGFILE}
 if [[ ! -e ${BACKUPDIR} ]]; then
-    echo -e "\t[-] ${BACKUPDIR} not present, qtv.cfg will be backed up in existing location"
+    echo -e "\t[-] ${BACKUPDIR} not present, qtv.cfg will be backed up in existing location" | tee -a ${LOGFILE}
     BACKUPDIR=""
 fi
 
@@ -65,6 +97,26 @@ if [[ `grep -v ^$ /tmp/servers_tmp.txt` = "" ]]; then
     exit 1
 fi
 
+# check qw servers
+SRVTOTAL="`wc -l /tmp/servers_tmp.txt | awk '{print $1}'`"
+SRVCUR=1
+echo -e "[+] checking QW servers (${SRVTOTAL} in initial list), check ${0}.err for details" | tee -a ${LOGFILE}
+while read svdata; do
+    srv_response=$(sk_checkquakeserver ${svdata})
+    case ${srv_response} in
+        0)  echo "${svdata}" >> /tmp/servers_qw.txt ;;
+        1)  echo -e "\t[${SRVCUR}/${SRVTOTAL}] ${svdata} not a QW server" | tee -a ${LOGFILE}
+            echo -e "${svdata} not a QW server" | tee -a ${LOGERR}
+            ;;
+        2)  echo -e "\t[${SRVCUR}/${SRVTOTAL}] ${svdata} not responding to Cmd_ping" | tee -a ${LOGFILE}
+            echo -e "${svdata} not responding to Cmd_ping" | tee -a ${LOGERR}
+            ;;
+    esac
+    SRVCUR=$[SRVCUR+1]
+done < /tmp/servers_tmp.txt
+mv /tmp/servers_qw.txt /tmp/servers_tmp.txt
+echo -e "\t[i] done, `wc -l /tmp/servers_tmp.txt | awk '{print $1}'` in the final list" | tee -a ${LOGFILE}
+
 echo -e "\t[+] backup of existing file" | tee -a ${LOGFILE}
 if [[ ${BACKUPDIR} != "" ]]; then
     cp -pr ${QTVFILE} ${BACKUPDIR}/`basename ${QTVFILE}`_`date +%Y-%m-%d@%H:%M:%S`
@@ -80,15 +132,15 @@ cat /tmp/servers.txt | grep -v ^$ | sed -e 's,^,qtv ,g' >> /tmp/servers_qtv.cfg
 echo -e "\t[+] compiling new ${QTVFILE}" | tee -a ${LOGFILE}
 mv /tmp/servers_qtv.cfg ${QTVFILE}
 echo -e "\t[+] cleaning tmp files" | tee -a ${LOGFILE}
-rm /tmp/servers_qtv.cfg /tmp/servers_tmp.txt /tmp/servers.txt 2>/dev/null
+sk_cleanup
 THISSCRIPTNAME=`basename ${0}`
 THISSCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 THISQTVBIN=`basename ${QTVBIN}`
 if [[ ${QTVAUTORESTART} = 1 ]]; then
-    echo -e "\t[+] restarting qtv"
+    echo -e "\t[+] restarting qtv" | tee -a ${LOGFILE}
     QTVPID="`ps axwww | grep -v grep | grep ${THISQTVBIN} | awk '{print $1}'`"
     if [[ ${QTVPID} != "" ]]; then
-        echo -e "\t\t[i] running qtv found, PID: ${QTVPID}, killing it now!"
+        echo -e "\t\t[i] running qtv found, PID: ${QTVPID}, killing it now!" | tee -a ${LOGFILE}
         kill -9 ${QTVPID}
     fi
     cd `dirname ${QTVBIN}`
@@ -96,14 +148,19 @@ if [[ ${QTVAUTORESTART} = 1 ]]; then
 else
     echo -e "[*] done, restart your qtv manually" | tee -a ${LOGFILE}
 fi
-echo -e "[i] checking crontab entry"
-if [[ `crontab -l | grep ${THISSCRIPTNAME}` = "" ]]; then
-    echo -e "\t[-] FAIL, crontab not present, adding one for you"
-    crontab -l > /tmp/crontab_tmp
-    echo "0 0 * * * ${THISSCRIPTDIR}/${THISSCRIPTNAME} > /dev/null 2>&1" >> /tmp/crontab_tmp
-    crontab /tmp/crontab_tmp
-    rm /tmp/crontab_tmp 2>/dev/null
+echo -e "[i] checking crontab entry" | tee -a ${LOGFILE}
+if [[ `crontab -l > /dev/null 2>&1` = 0 ]]; then
+    if [[ `crontab -l | grep ${THISSCRIPTNAME}` = "" ]]; then
+        echo -e "\t[-] FAIL, crontab not present, adding one for you" | tee -a ${LOGFILE}
+        crontab -l > /tmp/crontab_tmp
+        echo "0 0 * * sat ${THISSCRIPTDIR}/${THISSCRIPTNAME} > /dev/null 2>&1" >> /tmp/crontab_tmp
+        crontab /tmp/crontab_tmp
+        rm /tmp/crontab_tmp 2>/dev/null
+    else
+        echo -e "\t[+] OK, crontab is present" | tee -a ${LOGFILE}
+    fi
 else
-    echo -e "\t[+] OK, crontab is present"
+    echo -e "\t[-] crontab is not working here (problem with permissions?)" | tee -a ${LOGFILE}
 fi
 echo -e "[`date +%Y-%m-%d@%H:%M:%S`] end" | tee -a ${LOGFILE}
+sk_cleanup

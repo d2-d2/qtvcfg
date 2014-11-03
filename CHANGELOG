@@ -7,3 +7,8 @@
     - add: check crontab entry
     - add: filter out unwanted servers from source URL(s)
     - add: dedicated backup directory
+# 0.3
+    - fix: check if crontab is available
+    - add: check if ip:port list contains only QW servers (filter out forwarders, proxies or non-responding ones)
+    - fix: cleanup temporary files
+    - chg: crontab execution every Saturday at midnight
