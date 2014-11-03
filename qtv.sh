@@ -162,7 +162,7 @@ else
     echo -e "[i] done, restart your qtv manually" | tee -a ${LOGFILE}
 fi
 echo -e "[i] checking crontab entry" | tee -a ${LOGFILE}
-if [[ `crontab -l > /dev/null 2>&1` = 0 ]]; then
+if [[ `crontab -l > /dev/null 2>&1; echo $?` = 0 ]]; then
     if [[ `crontab -l | grep ${THISSCRIPTNAME}` = "" ]]; then
         echo -e "\t[-] FAIL, crontab not present, adding one for you" | tee -a ${LOGFILE}
         crontab -l > /tmp/crontab_tmp
