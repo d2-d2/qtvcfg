@@ -24,13 +24,18 @@ QTVAUTORESTART=1
 THISSCRIPTNAME=`basename ${0}`
 THISSCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 THISQTVBIN=`basename ${QTVBIN}`
-THISSCRIPTPID="`ps awfxu | grep -v grep | grep -v $$ | grep ${THISSCRIPTNAME}`"
+THISSCRIPTPID="$$"
+THISLOCKFILE=/tmp/${THISSCRIPTNAME}.lock
 LOGFILE=${THISSCRIPTDIR}/${THISSCRIPTNAME}.log
 LOGERR=${THISSCRIPTDIR}/${THISSCRIPTNAME}.err
 
-if [[ ${THISSCRIPTPID} != "" ]]; then
-    echo -e "[-] script is already running, PID: ${THISSCRIPTPID}"
+cat /dev/null >> ${THISLOCKFILE}
+read lastPID < ${THISLOCKFILE}
+if [[ (! -z "${lastPID}") && (-d /proc/${lastPID}) ]]; then
+    echo -e "[-] script is already running, PID: ${lastPID}"
     exit 1
+else
+    echo ${THISSCRIPTPID} > ${THISLOCKFILE}
 fi
 
 function sk_checkquakeserver(){
