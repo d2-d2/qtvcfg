@@ -108,6 +108,7 @@ make sure to replace $HOME with something meaningful, like: /home/d2/
 * chmod 755 $HOME/qtvcfg/qtv.sh
 
 ### todo
+* speed up execution of this script (it takes 20minutes to complete run on 235 servers)
 
 ### Ideas? Reports?
 

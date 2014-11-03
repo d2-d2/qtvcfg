@@ -1,27 +1,37 @@
 #!/bin/bash
 
 #### CFG section starts here
-version=0.3
-LOGFILE=${0}.log
-LOGERR=${0}.err
+version=0.4
 # define pipe-delimited exclude list for quake servers
 EXCLUDELIST="QFWD|FWD"
 # dedicated backup directory for qtv.cfg files
-BACKUPDIR=/full/path/to/backup/dir
+BACKUPDIR=/home/users/d2/qtvbackup
 # paste full path to your qtv.cfg here, please make sure it have: # servers to monitor markup.
 # otherwise this script will fail to update it. Example syntax:
 # [...]
 # # servers to monitor
 # qtv miami.usa.besmella.com:28501
 # qtv miami.usa.besmella.com:28502
-QTVFILE=/full/path/to/qtv.cfg
+QTVFILE=/home/users/d2/qtv/qtv/qtv.cfg
 # working QTV binary
-QTVBIN=/full/path/to/qtv.bin
+QTVBIN=/home/users/d2/qtv/qtv.bin
 # URL containing updated list of quake servers (ip:port format), you can have more than one, space-delimited URLs
 UPDATEURL="http://www.quakeservers.net/lists/servers/servers.txt"
 # attemt to restart QTV binary automatically
 QTVAUTORESTART=1
 #### CFG section ended - please do not change anything below this line ####
+
+THISSCRIPTNAME=`basename ${0}`
+THISSCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+THISQTVBIN=`basename ${QTVBIN}`
+THISSCRIPTPID="`ps awfxu | grep -v grep | grep -v $$ | grep ${THISSCRIPTNAME}`"
+LOGFILE=${THISSCRIPTDIR}/${THISSCRIPTNAME}.log
+LOGERR=${THISSCRIPTDIR}/${THISSCRIPTNAME}.err
+
+if [[ ${THISSCRIPTPID} != "" ]]; then
+    echo -e "[-] script is already running, PID: ${THISSCRIPTPID}"
+    exit 1
+fi
 
 function sk_checkquakeserver(){
     known_server_strings="(MVDSV|FTE|CPQWSV|ZQuake)"
@@ -29,7 +39,7 @@ function sk_checkquakeserver(){
     s_ip=`echo ${srv_data} | cut -d: -f1`
     s_port=`echo ${srv_data} | cut -d: -f2`
     sv_ping=$(printf "\xff\xff\xff\xff ping" | nc -w 1 -u ${s_ip} ${s_port})
-    if [[  ${sv_ping} =~ 1 ]]; then
+    if [[  ${sv_ping} != "" ]]; then
         sv_version=$(printf "\xff\xff\xff\xff status" | nc -w 1 -u ${s_ip} ${s_port} | cut -d\\ -f2- | awk '{
             for (i = 0; ++i <=NF;)
                 if ($i == o)
@@ -49,7 +59,8 @@ function sk_checkquakeserver(){
 }
 
 function sk_cleanup(){
-    rm /tmp/servers_qtv.cfg /tmp/servers_tmp.txt /tmp/servers.txt ${0}.err 2>/dev/null
+    rm /tmp/servers_qtv.cfg /tmp/servers_tmp.txt /tmp/servers.txt ${LOGERR} 2>/dev/null
+    touch ${LOGERR}
 }
 
 sk_cleanup
@@ -106,16 +117,16 @@ while read svdata; do
     case ${srv_response} in
         0)  echo "${svdata}" >> /tmp/servers_qw.txt ;;
         1)  echo -e "\t[${SRVCUR}/${SRVTOTAL}] ${svdata} not a QW server" | tee -a ${LOGFILE}
-            echo -e "${svdata} not a QW server" | tee -a ${LOGERR}
+            echo -e "[`date +%Y-%m-%d@%H:%M:%S`] ${svdata} not a QW server" >> ${LOGERR}
             ;;
         2)  echo -e "\t[${SRVCUR}/${SRVTOTAL}] ${svdata} not responding to Cmd_ping" | tee -a ${LOGFILE}
-            echo -e "${svdata} not responding to Cmd_ping" | tee -a ${LOGERR}
+            echo -e "[`date +%Y-%m-%d@%H:%M:%S`] ${svdata} not responding to Cmd_ping" >> ${LOGERR}
             ;;
     esac
     SRVCUR=$[SRVCUR+1]
 done < /tmp/servers_tmp.txt
 mv /tmp/servers_qw.txt /tmp/servers_tmp.txt
-echo -e "\t[i] done, `wc -l /tmp/servers_tmp.txt | awk '{print $1}'` in the final list" | tee -a ${LOGFILE}
+echo -e "\t[i] done, `wc -l /tmp/servers_tmp.txt | awk '{print $1}'` servers in the final list" | tee -a ${LOGFILE}
 
 echo -e "[i] backup of existing file" | tee -a ${LOGFILE}
 if [[ ${BACKUPDIR} != "" ]]; then
@@ -133,9 +144,6 @@ echo -e "[i] compiling new ${QTVFILE}" | tee -a ${LOGFILE}
 mv /tmp/servers_qtv.cfg ${QTVFILE}
 echo -e "[i] cleaning tmp files" | tee -a ${LOGFILE}
 sk_cleanup
-THISSCRIPTNAME=`basename ${0}`
-THISSCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-THISQTVBIN=`basename ${QTVBIN}`
 if [[ ${QTVAUTORESTART} = 1 ]]; then
     echo -e "[+] restarting qtv" | tee -a ${LOGFILE}
     QTVPID="`ps axwww | grep -v grep | grep ${THISQTVBIN} | awk '{print $1}'`"

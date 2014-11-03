@@ -12,3 +12,6 @@
     - add: check if ip:port list contains only QW servers (filter out forwarders, proxies or non-responding ones)
     - fix: cleanup temporary files
     - chg: crontab execution every Saturday at midnight
+# 0.4
+    - add: only single instance of running script is allowed
+    - fix: better handling of errors
