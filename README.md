@@ -9,6 +9,7 @@ shell script to update qtv.cfg files
 * sed
 * git
 * nohup
+
 ### Initial configuration
 
 Before you run this script, please open it and configure following variables:
