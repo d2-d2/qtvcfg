@@ -64,7 +64,7 @@ function sk_checkquakeserver(){
 }
 
 function sk_cleanup(){
-    rm /tmp/servers_qtv.cfg /tmp/servers_tmp.txt /tmp/servers.txt ${LOGERR} 2>/dev/null
+    rm /tmp/servers_qtv.cfg /tmp/servers_tmp.txt /tmp/servers.txt ${LOGERR} ${THISLOCKFILE} 2>/dev/null
     touch ${LOGERR}
 }
 
