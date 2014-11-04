@@ -118,6 +118,9 @@ make sure to replace $HOME with something meaningful, like: /home/d2/
 
 ### todo
 * speed up execution of this script (it takes 15minutes to complete run on 292 servers)
+* remove password-protected servers
+* do not ping or process servers that are still on UPDATEURL but were marked as invalid on recent run
+* move variables from main sscript into separate cfg file?
 
 ### Ideas? Reports?
 
