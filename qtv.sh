@@ -71,7 +71,7 @@ function sk_cleanup(){
 sk_cleanup
 
 echo -e "[`date +%Y-%m-%d@%H:%M:%S`] starting new event" | tee -a ${LOGFILE}
-echo -e "QTV cfg updater by d2@tdhack.com\n" | tee -a ${LOGFILE}
+echo -e "QTV cfg updater by d2@tdhack.com, version: ${version}\n" | tee -a ${LOGFILE}
 
 # before we do anything, let's check qtv.cfg presence and format, then qtv binary readiness
 echo -e "[i] verifying your ${QTVFILE} file" | tee -a ${LOGFILE}
