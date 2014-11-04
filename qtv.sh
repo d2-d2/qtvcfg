@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #### CFG section starts here
-version=0.4
+version=0.5
 # define pipe-delimited exclude list for quake servers
 EXCLUDELIST="QFWD|FWD"
 # dedicated backup directory for qtv.cfg files
@@ -19,6 +19,8 @@ QTVBIN=/home/users/d2/qtv/qtv.bin
 UPDATEURL="http://www.quakeservers.net/lists/servers/servers.txt"
 # attemt to restart QTV binary automatically
 QTVAUTORESTART=1
+# you've read script! set this to 0 in order to run this script ;-)
+README=1
 #### CFG section ended - please do not change anything below this line ####
 
 THISSCRIPTNAME=`basename ${0}`
@@ -28,6 +30,11 @@ THISSCRIPTPID="$$"
 THISLOCKFILE=/tmp/${THISSCRIPTNAME}.lock
 LOGFILE=${THISSCRIPTDIR}/${THISSCRIPTNAME}.log
 LOGERR=${THISSCRIPTDIR}/${THISSCRIPTNAME}.err
+
+if [[ ${README} = 1 ]]; then
+    echo -e "[-] please read script and README.md comments carefuly"
+    exit 1
+fi
 
 cat /dev/null >> ${THISLOCKFILE}
 read lastPID < ${THISLOCKFILE}
@@ -140,8 +147,9 @@ else
     cp -pr ${QTVFILE}{,_`date +%Y-%m-%d@%H:%M:%S`}
 fi
 echo -e "[i] preparing input data" | tee -a ${LOGFILE}
-sed "1,`grep -n '# servers to monitor' ${QTVFILE} | cut -d: -f1`d" ${QTVFILE} | awk '{print $2}' >> /tmp/servers_tmp.txt
-cat /tmp/servers_tmp.txt | sort -r | uniq > /tmp/servers.txt
+# mushi's request - do not append new list to existing one, just create new list everytime that script is executed
+# sed "1,`grep -n '# servers to monitor' ${QTVFILE} | cut -d: -f1`d" ${QTVFILE} | awk '{print $2}' >> /tmp/servers_tmp.txt
+# cat /tmp/servers_tmp.txt | sort -r | uniq > /tmp/servers.txt
 sed -n "1,`grep -n '# servers to monitor' ${QTVFILE} | cut -d: -f1`p" ${QTVFILE} > /tmp/servers_qtv.cfg
 echo -e "\n" >> /tmp/servers_qtv.cfg
 cat /tmp/servers.txt | grep -v ^$ | sed -e 's,^,qtv ,g' >> /tmp/servers_qtv.cfg

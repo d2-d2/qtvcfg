@@ -15,3 +15,6 @@
 # 0.4
     - add: only single instance of running script is allowed
     - fix: better handling of errors
+# 0.5
+    - fix: do not append new server to existing list, create new one each time qtv.sh script is executed
+    - add: better description of things to do before script can be started
