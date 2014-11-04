@@ -1,26 +1,25 @@
 #!/bin/bash
 
 #### CFG section starts here
-version=0.5
+version=0.6
 # define pipe-delimited exclude list for quake servers
 EXCLUDELIST="QFWD|FWD"
 # dedicated backup directory for qtv.cfg files
 BACKUPDIR=/home/users/d2/qtvbackup
-# paste full path to your qtv.cfg here, please make sure it have: # servers to monitor markup.
-# otherwise this script will fail to update it. Example syntax:
+# paste full path to your qtv.cfg here, please make sure it have: // servers to monitor markup.
+# otherwise this script will fail to update it. Make sure qtv.cfg is in the same directory as
+# QTVBIN binary. Example syntax:
 # [...]
-# # servers to monitor
+# // servers to monitor
 # qtv miami.usa.besmella.com:28501
 # qtv miami.usa.besmella.com:28502
-QTVFILE=/home/users/d2/qtv/qtv/qtv.cfg
+QTVFILE=/home/users/d2/qtv/qtv.cfg
 # working QTV binary
 QTVBIN=/home/users/d2/qtv/qtv.bin
 # URL containing updated list of quake servers (ip:port format), you can have more than one, space-delimited URLs
 UPDATEURL="http://www.quakeservers.net/lists/servers/servers.txt"
 # attemt to restart QTV binary automatically
 QTVAUTORESTART=1
-# you've read script! set this to 0 in order to run this script ;-)
-README=1
 #### CFG section ended - please do not change anything below this line ####
 
 THISSCRIPTNAME=`basename ${0}`
@@ -50,7 +49,7 @@ function sk_checkquakeserver(){
     srv_data=${1}
     s_ip=`echo ${srv_data} | cut -d: -f1`
     s_port=`echo ${srv_data} | cut -d: -f2`
-    sv_ping=$(printf "\xff\xff\xff\xff ping" | nc -w 1 -u ${s_ip} ${s_port})
+    sv_ping=$(printf "\xff\xff\xff\xff ping" | nc -q 1 -u ${s_ip} ${s_port})
     if [[  ${sv_ping} != "" ]]; then
         sv_version=$(printf "\xff\xff\xff\xff status" | nc -w 1 -u ${s_ip} ${s_port} | cut -d\\ -f2- | awk '{
             for (i = 0; ++i <=NF;)
@@ -87,8 +86,8 @@ if [[ ! -e ${QTVFILE} ]]; then
     echo -e "[`date +%Y-%m-%d@%H:%M:%S`] end" | tee -a ${LOGFILE}
     exit 1
 fi
-if [[ `grep '# servers to monitor' ${QTVFILE}` == "" ]]; then
-    echo -e "\t[-] ${QTVFILE} exists but it does not contain: '# servers to monitor' marker. No action taken" | tee -a ${LOGFILE}
+if [[ `grep '// servers to monitor' ${QTVFILE}` == "" ]]; then
+    echo -e "\t[-] ${QTVFILE} exists but it does not contain: '// servers to monitor' marker. No action taken" | tee -a ${LOGFILE}
     echo -e "[`date +%Y-%m-%d@%H:%M:%S`] end" | tee -a ${LOGFILE}
     exit 1
 fi
@@ -101,6 +100,10 @@ echo -e "[i] checking if ${BACKUPDIR} exists" | tee -a ${LOGFILE}
 if [[ ! -e ${BACKUPDIR} ]]; then
     echo -e "\t[-] ${BACKUPDIR} not present, qtv.cfg will be backed up in existing location" | tee -a ${LOGFILE}
     BACKUPDIR=""
+fi
+if [[ ! -e `dirname ${QTVBIN}`/`basename ${QTVFILE}` ]]; then
+    echo -e "[-] make sure ${QTVFILE} is placed in the same directory as QTVBIN is (${QTVBIN})"
+    exit 1
 fi
 
 # get most recent list of Quake servers
@@ -148,9 +151,9 @@ else
 fi
 echo -e "[i] preparing input data" | tee -a ${LOGFILE}
 # mushi's request - do not append new list to existing one, just create new list everytime that script is executed
-# sed "1,`grep -n '# servers to monitor' ${QTVFILE} | cut -d: -f1`d" ${QTVFILE} | awk '{print $2}' >> /tmp/servers_tmp.txt
-# cat /tmp/servers_tmp.txt | sort -r | uniq > /tmp/servers.txt
-sed -n "1,`grep -n '# servers to monitor' ${QTVFILE} | cut -d: -f1`p" ${QTVFILE} > /tmp/servers_qtv.cfg
+# sed "1,`grep -n '// servers to monitor' ${QTVFILE} | cut -d: -f1`d" ${QTVFILE} | awk '{print $2}' >> /tmp/servers_tmp.txt
+cat /tmp/servers_tmp.txt | sort -r | uniq > /tmp/servers.txt
+sed -n "1,`grep -n '// servers to monitor' ${QTVFILE} | cut -d: -f1`p" ${QTVFILE} > /tmp/servers_qtv.cfg
 echo -e "\n" >> /tmp/servers_qtv.cfg
 cat /tmp/servers.txt | grep -v ^$ | sed -e 's,^,qtv ,g' >> /tmp/servers_qtv.cfg
 echo -e "[i] compiling new ${QTVFILE}" | tee -a ${LOGFILE}
@@ -165,7 +168,7 @@ if [[ ${QTVAUTORESTART} = 1 ]]; then
         kill -9 ${QTVPID}
     fi
     cd `dirname ${QTVBIN}`
-    nohup ${QTVBIN} > /dev/null 2>&1 &
+    nohup ${QTVBIN} +exec `basename ${QTVFILE}` > /dev/null 2>&1 &
 else
     echo -e "[i] done, restart your qtv manually" | tee -a ${LOGFILE}
 fi

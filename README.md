@@ -9,6 +9,7 @@ shell script to update qtv.cfg files
 * sed
 * git
 * nohup
+* netcat
 
 ### Initial configuration
 
@@ -18,7 +19,8 @@ Before you run this script, please open it and configure following variables:
 - QTVBIN
 - UPDATEURL
 - QTVAUTORESTART
-- README
+
+All of them are well documented so you should have no problems with filling them up.
 
 ### Example outputs:
 ```
@@ -115,7 +117,7 @@ make sure to replace $HOME with something meaningful, like: /home/d2/
 * chmod 755 $HOME/qtvcfg/qtv.sh
 
 ### todo
-* speed up execution of this script (it takes 20minutes to complete run on 235 servers)
+* speed up execution of this script (it takes 15minutes to complete run on 292 servers)
 
 ### Ideas? Reports?
 

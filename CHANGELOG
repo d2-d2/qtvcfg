@@ -18,3 +18,7 @@
 # 0.5
     - fix: do not append new server to existing list, create new one each time qtv.sh script is executed
     - add: better description of things to do before script can be started
+# 0.6
+    - fix: markup '# servers to monitor' is invalid, use '//' instead of '#'
+    - add: +exec qtv.cfg in command line (relative path)
+    - fix: removed README=1 from source (it causes problem during git pull command
