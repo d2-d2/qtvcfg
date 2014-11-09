@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #### CFG section starts here
-version=0.6
+version=0.7
 # define pipe-delimited exclude list for quake servers
-EXCLUDELIST="QFWD|FWD"
+EXCLUDELIST="QTV|FWD|localhost"
 # dedicated backup directory for qtv.cfg files
 BACKUPDIR=/home/users/d2/qtvbackup
 # paste full path to your qtv.cfg here, please make sure it have: // servers to monitor markup.
@@ -30,11 +30,6 @@ THISLOCKFILE=/tmp/${THISSCRIPTNAME}.lock
 LOGFILE=${THISSCRIPTDIR}/${THISSCRIPTNAME}.log
 LOGERR=${THISSCRIPTDIR}/${THISSCRIPTNAME}.err
 
-if [[ ${README} = 1 ]]; then
-    echo -e "[-] please read script and README.md comments carefuly"
-    exit 1
-fi
-
 cat /dev/null >> ${THISLOCKFILE}
 read lastPID < ${THISLOCKFILE}
 if [[ (! -z "${lastPID}") && (-d /proc/${lastPID}) ]]; then
@@ -43,6 +38,22 @@ if [[ (! -z "${lastPID}") && (-d /proc/${lastPID}) ]]; then
 else
     echo ${THISSCRIPTPID} > ${THISLOCKFILE}
 fi
+
+function sk_checkrequiredpackages(){
+    echo -e "[i] checking for required packages" | tee -a ${LOGFILE}
+    PACKAGES="echo comm wget sed tr nc basename dirname cut cat grep printf tee rm mv crontab"
+    for pkg in ${PACKAGES}; do
+        if [[ `which ${pkg}` == "" ]]; then
+            MISSING="${MISSING}, ${pkg}"
+        fi
+    done
+    if [[ ${MISSING} != "" ]]; then
+        echo -e "\t[-] missing packages: `echo ${MISSING} | sed -e 's/^, //g;s/, $//g'`. Make sure to have them ready before launching this script" | tee -a ${LOGFILE}
+        exit 1
+    else
+        echo -e "\t[+] all good" | tee -a ${LOGFILE}
+    fi
+}
 
 function sk_checkquakeserver(){
     known_server_strings="(MVDSV|FTE|CPQWSV|ZQuake)"
@@ -70,7 +81,7 @@ function sk_checkquakeserver(){
 }
 
 function sk_cleanup(){
-    rm /tmp/servers_qtv.cfg /tmp/servers_tmp.txt /tmp/servers.txt ${LOGERR} ${THISLOCKFILE} 2>/dev/null
+    rm /tmp/servers_qtv.cfg /tmp/servers_tmp.txt /tmp/servers.txt /tmp/servers_badones.txt 2>/dev/null
     touch ${LOGERR}
 }
 
@@ -78,6 +89,8 @@ sk_cleanup
 
 echo -e "[`date +%Y-%m-%d@%H:%M:%S`] starting new event" | tee -a ${LOGFILE}
 echo -e "QTV cfg updater by d2@tdhack.com, version: ${version}\n" | tee -a ${LOGFILE}
+
+sk_checkrequiredpackages
 
 # before we do anything, let's check qtv.cfg presence and format, then qtv binary readiness
 echo -e "[i] verifying your ${QTVFILE} file" | tee -a ${LOGFILE}
@@ -121,12 +134,37 @@ if [[ `grep -v ^$ /tmp/servers_tmp.txt` = "" ]]; then
     echo -e "\t[-] /tmp/servers_tmp.txt is empty, nothing to update. Aborting" | tee -a ${LOGFILE}
     echo -e "[`date +%Y-%m-%d@%H:%M:%S`] end" | tee -a ${LOGFILE}
     exit 1
+else
+    echo -e "\t[+] done, $(wc -l /tmp/servers_tmp.txt | awk '{print $1}') servers downloaded" | tee -a ${LOGFILE}
+fi
+
+# filter out password protected or dead from previous run: use nohup.out and ${0}.err for that
+cat /dev/null > /tmp/servers_badones.txt
+if [[ -e `dirname ${QTVBIN}`/nohup.out ]]; then
+    # grep -B1 "Bad password" `dirname ${QTVBIN}`/nohup.out | grep tcp | sort | uniq | sed -e 's,tcp:,,g;s,:$,,g' >> /tmp/servers_badones.txt
+    # grep -E '(Socket error|server disconnected)' `dirname ${QTVBIN}`/nohup.out | cut -d: -f2,3 | sort -r | uniq >> /tmp/servers_badones.txt
+    # hold on ... looks like 'source registered' shows only working qserver. Let's use that :-)
+    grep 'Source registered' `dirname ${QTVBIN}`/nohup.out | grep -v localhost | awk '{print $3}' | cut -d: -f2,3 | sort -r | uniq >> /tmp/servers_badones.txt
+fi
+
+if [[ -e ${LOGERR} ]]; then
+    grep "" ${LOGERR} | awk '{print $2}' | sort -r | uniq >> /tmp/servers_badones.txt
+fi
+
+if [[ -e /tmp/servers_badones.txt ]]; then
+    cat /tmp/servers_badones.txt | sort -r | uniq > /tmp/servers_badones_sorted.txt
+    mv /tmp/servers_badones_sorted.txt /tmp/servers_badones.txt
+    echo -e "[i] fixing duplicates, password-protected and not working servers" | tee -a ${LOGFILE}
+    comm -3 <(sort /tmp/servers_badones.txt) <(sort /tmp/servers_tmp.txt) | awk '{print $1}' > /tmp/servers_tmp_comm.txt
+    mv /tmp/servers_tmp_comm.txt /tmp/servers_tmp.txt
+    echo -e "\t[+] done, final list have now $(wc -l /tmp/servers_tmp.txt | awk '{print $1}') records" | tee -a ${LOGFILE}
 fi
 
 # check qw servers
 SRVTOTAL="`wc -l /tmp/servers_tmp.txt | awk '{print $1}'`"
 SRVCUR=1
 echo -e "[+] checking QW servers (${SRVTOTAL} in initial list), check ${0}.err for details" | tee -a ${LOGFILE}
+if [[ -e ${LOGERR} ]]; then rm ${LOGERR}; fi
 while read svdata; do
     srv_response=$(sk_checkquakeserver ${svdata})
     case ${srv_response} in
@@ -165,10 +203,11 @@ if [[ ${QTVAUTORESTART} = 1 ]]; then
     QTVPID="`ps axwww | grep -v grep | grep ${THISQTVBIN} | awk '{print $1}'`"
     if [[ ${QTVPID} != "" ]]; then
         echo -e "\t[+] running qtv found, PID: ${QTVPID}, killing it now!" | tee -a ${LOGFILE}
+        rm `dirname ${QTVBIN}`/nohup.out > /dev/null 2>&1
         kill -9 ${QTVPID}
     fi
     cd `dirname ${QTVBIN}`
-    nohup ${QTVBIN} +exec `basename ${QTVFILE}` > /dev/null 2>&1 &
+    nohup ${QTVBIN} +exec `basename ${QTVFILE}` > `dirname ${QTVBIN}`/nohup.out 2>&1 &
 else
     echo -e "[i] done, restart your qtv manually" | tee -a ${LOGFILE}
 fi
@@ -187,4 +226,5 @@ else
     echo -e "\t[-] crontab is not working here (problem with permissions?)" | tee -a ${LOGFILE}
 fi
 echo -e "[`date +%Y-%m-%d@%H:%M:%S`] end" | tee -a ${LOGFILE}
+rm ${THISLOCKFILE}
 sk_cleanup

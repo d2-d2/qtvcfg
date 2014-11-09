@@ -22,3 +22,8 @@
     - fix: markup '# servers to monitor' is invalid, use '//' instead of '#'
     - add: +exec qtv.cfg in command line (relative path)
     - fix: removed README=1 from source (it causes problem during git pull command
+# 0.7
+    - fix: remove duplicates, password-protected and not working servers
+    - add: check for required packages
+    - fix: only single instance of running script is allowed, do not delete lock file
+    - fix: faster execution (clean list, 168 servers in 8 minutes)
