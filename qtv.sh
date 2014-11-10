@@ -207,7 +207,7 @@ if [[ ${QTVAUTORESTART} = 1 ]]; then
         kill -9 ${QTVPID}
     fi
     cd `dirname ${QTVBIN}`
-    nohup ${QTVBIN} +exec `basename ${QTVFILE}` > `dirname ${QTVBIN}`/nohup.out 2>&1 &
+    nohup ${QTVBIN} +exec ./`basename ${QTVFILE}` > `dirname ${QTVBIN}`/nohup.out 2>&1 &
 else
     echo -e "[i] done, restart your qtv manually" | tee -a ${LOGFILE}
 fi
